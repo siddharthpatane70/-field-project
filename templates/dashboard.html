@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Operations Dashboard | TVS Parts Hub{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dash-heading { letter-spacing: -.035em; }
+    .dash-card { border: 1px solid #e8edf3; border-radius: 16px; box-shadow: 0 5px 22px rgba(15,23,42,.045); }
+    .dash-kpi { min-height: 142px; position: relative; overflow: hidden; }
+    .dash-kpi::after { content: ''; width: 88px; height: 88px; border-radius: 50%; position: absolute; right: -25px; top: -30px; background: var(--kpi-tint, rgba(227,30,36,.07)); }
+    .dash-kpi .kpi-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--kpi-tint, #fff2f2); color: var(--kpi-color, #c51d26); }
+    .dash-kpi .kpi-value { font-size: clamp(1.55rem, 3vw, 2rem); letter-spacing: -.04em; }
+    .dash-toolbar { border: 1px solid #e8edf3; border-radius: 14px; background: #fff; }
+    .dash-table th { white-space: nowrap; }
+    .dash-insight { border-left: 3px solid #94a3b8; }
+    .dash-insight.danger { border-color: #dc3545; background: #fff7f7; }
+    .dash-insight.warning { border-color: #f0ad00; background: #fffaf0; }
+    .dash-insight.success { border-color: #198754; background: #f2fbf6; }
+    .dash-insight.info { border-color: #0d6efd; background: #f4f8ff; }
+    .dash-insight.secondary { border-color: #64748b; background: #f8fafc; }
+    .dash-chip { border: 1px solid #e2e8f0; border-radius: 999px; padding: .22rem .6rem; color: #475569; background: #f8fafc; font-size: .75rem; }
+    .dash-card .card-header { border-bottom: 1px solid #edf0f4; border-radius: 16px 16px 0 0 !important; }
+    @media (max-width: 767.98px) { .dash-toolbar .filter-group { width: 100%; } .dash-toolbar .form-select { min-width: 0 !important; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <div class="small text-uppercase fw-bold text-danger mb-1">TVS Parts · Operations</div>
+        <h1 class="h2 fw-bold dash-heading mb-1">Inventory command center</h1>
+        <p class="text-muted mb-0" id="dashboard-as-of">Loading current business signals…</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('inventory') }}" class="btn btn-danger"><i class="fa-solid fa-plus me-2"></i>Add product</a>
+        <a href="{{ url_for('forecast_hub') }}" class="btn btn-outline-dark"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI forecast & copilot</a>
+    </div>
+</div>
+
+<section class="dash-toolbar p-3 mb-4" aria-label="Dashboard filters">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div class="d-flex flex-wrap align-items-end gap-3 filter-group">
+            <div>
+                <label class="form-label small fw-semibold mb-1" for="dashboard-range">Sales comparison</label>
+                <select class="form-select" id="dashboard-range" style="min-width:180px">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                    <option value="365">Last 365 days</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label small fw-semibold mb-1" for="dashboard-category">Product category</label>
+                <select class="form-select" id="dashboard-category" style="min-width:190px">
+                    <option value="">All categories</option>
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" id="dashboard-export" type="button" title="Download the visible dashboard data as CSV"><i class="fa-solid fa-download me-2"></i>Export CSV</button>
+            <button class="btn btn-outline-danger" id="dashboard-refresh" type="button"><i class="fa-solid fa-rotate me-2"></i>Refresh</button>
+        </div>
+    </div>
+</section>
+
+<div id="dashboard-error" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
+
+<section class="row g-3 mb-4" aria-label="Key performance indicators">
+    <div class="col-sm-6 col-xl-3"><article class="card dash-card dash-kpi h-100" style="--kpi-color:#c51d26;--kpi-tint:#fff0f1"><div class="card-body d-flex flex-column justify-content-between">
+        <div class="d-flex justify-content-between align-items-center"><span class="small text-uppercase fw-bold text-muted">Products in view</span><span class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></span></div>
+        <div><div class="kpi-value fw-bold" id="dash-kpi-products">—</div><div class="small text-muted">Active inventory records</div></div>
+    </div></article></div>
+    <div class="col-sm-6 col-xl-3"><article class="card dash-card dash-kpi h-100" style="--kpi-color:#b77900;--kpi-tint:#fff8e6"><div class="card-body d-flex flex-column justify-content-between">
+        <div class="d-flex justify-content-between align-items-center"><span class="small text-uppercase fw-bold text-muted">Needs stock review</span><span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+        <div><div class="kpi-value fw-bold" id="dash-kpi-low-stock">—</div><div class="small text-muted" id="dash-kpi-stock-detail">At or below reorder level</div></div>
+    </div></article></div>
+    <div class="col-sm-6 col-xl-3"><article class="card dash-card dash-kpi h-100" style="--kpi-color:#146c43;--kpi-tint:#eaf8f0"><div class="card-body d-flex flex-column justify-content-between">
+        <div class="d-flex justify-content-between align-items-center"><span class="small text-uppercase fw-bold text-muted">Recorded sales</span><span class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></span></div>
+        <div><div class="kpi-value fw-bold" id="dash-kpi-sales">—</div><div class="small text-muted" id="dash-kpi-sales-change">Units in selected period</div></div>
+    </div></article></div>
+    <div class="col-sm-6 col-xl-3"><article class="card dash-card dash-kpi h-100" style="--kpi-color:#245b9b;--kpi-tint:#eef5ff"><div class="card-body d-flex flex-column justify-content-between">
+        <div class="d-flex justify-content-between align-items-center"><span class="small text-uppercase fw-bold text-muted">Stock at list price</span><span class="kpi-icon"><i class="fa-solid fa-indian-rupee-sign"></i></span></div>
+        <div><div class="kpi-value fw-bold" id="dash-kpi-stock-value">—</div><div class="small text-muted" id="dash-kpi-open-jobs">Open workshop jobs: —</div></div>
+    </div></article></div>
+</section>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-8">
+        <section class="card dash-card h-100">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div><h2 class="h6 fw-bold mb-1">Sales activity</h2><div class="small text-muted" id="dash-chart-caption">Current period compared with the previous equal-length period</div></div>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Sales chart measure">
+                    <button class="btn btn-danger active" type="button" data-dashboard-measure="units" aria-pressed="true">Units</button>
+                    <button class="btn btn-outline-danger" type="button" data-dashboard-measure="revenue" aria-pressed="false">Sales value</button>
+                </div>
+            </div>
+            <div class="card-body"><div class="position-relative" style="height:310px"><canvas id="dashboard-sales-chart" aria-label="Sales over the selected period compared with the previous period"></canvas></div>
+                <div class="d-flex flex-wrap gap-2 mt-3"><span class="dash-chip" id="dash-sales-row-chip">Saved rows: —</span><span class="dash-chip" id="dash-linked-row-chip">Product-linked rows: —</span><span class="dash-chip" id="dash-period-revenue">Recorded sales value: —</span></div>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-4">
+        <section class="card dash-card h-100">
+            <div class="card-header bg-white py-3"><h2 class="h6 fw-bold mb-1">Action signals</h2><div class="small text-muted">Rules derived from your saved records</div></div>
+            <div class="card-body"><div class="d-grid gap-2" id="dashboard-insights" aria-live="polite"><div class="text-muted small">Reading inventory and sales…</div></div></div>
+        </section>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <section class="card dash-card h-100">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div><h2 class="h6 fw-bold mb-1">Top recorded products</h2><div class="small text-muted">Ranked only from sales linked to current inventory products</div></div>
+                <input class="form-control form-control-sm" id="dashboard-product-search" type="search" placeholder="Filter these products…" aria-label="Filter top products" style="max-width:220px">
+            </div>
+            <div class="table-responsive"><table class="table table-hover align-middle dash-table mb-0">
+                <thead><tr><th>Product</th><th>Category</th><th class="text-end">Units</th><th class="text-end">Recorded value</th><th></th></tr></thead>
+                <tbody id="dashboard-top-products"><tr><td colspan="5" class="text-center text-muted py-4">Loading…</td></tr></tbody>
+            </table></div>
+        </section>
+    </div>
+    <div class="col-xl-5">
+        <section class="card dash-card h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2"><div><h2 class="h6 fw-bold mb-1">Restock priorities</h2><div class="small text-muted">Gap to each saved reorder level</div></div><a href="{{ url_for('inventory') }}" class="small text-danger fw-semibold text-decoration-none">Open inventory <i class="fa-solid fa-arrow-right ms-1"></i></a></div>
+            <div class="table-responsive"><table class="table table-hover align-middle dash-table mb-0"><thead><tr><th>Product</th><th>On hand</th><th>Target gap</th><th>Signal</th></tr></thead><tbody id="dashboard-restock"><tr><td colspan="4" class="text-center text-muted py-4">Loading…</td></tr></tbody></table></div>
+        </section>
+    </div>
+</div>
+
+<section class="card dash-card mb-3">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div><div class="fw-bold"><i class="fa-solid fa-circle-info text-primary me-2"></i>Data coverage</div><div class="small text-muted" id="dashboard-data-quality">Loading coverage details…</div></div>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('analytics') }}"><i class="fa-solid fa-chart-column me-2"></i>Open sales analytics</a>
+    </div>
+</section>
+{% endblock %}

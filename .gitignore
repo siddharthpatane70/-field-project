@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite-shm
+*.sqlite-wal
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.venv/
+.session_secret
+*.db

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}WhatsApp Digital Billing & Saved Records | TVS System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2 text-dark fw-bold mb-0">WhatsApp Billing & Saved Invoice Records</h1>
+        <p class="text-muted small mb-0">Create customer profile, generate bills, save records in database, and send receipts via WhatsApp.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Left Column: Customer Details & Item Selection -->
+    <div class="col-lg-7">
+        <!-- Customer Profile Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-dark text-white fw-bold">
+                <i class="fa-solid fa-user-plus me-2 text-danger"></i>1. Customer Profile Information
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Customer Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="cust_name" placeholder="e.g. Rahul Sharma" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">WhatsApp Mobile Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">+91</span>
+                            <input type="tel" class="form-control" id="cust_phone" placeholder="9876543210" required>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Vehicle Number / Model (Optional)</label>
+                        <input type="text" class="form-control" id="cust_vehicle" placeholder="e.g. MH 12 AB 1234 (Apache RTR 200)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Selection Card -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-bold py-3">
+                <i class="fa-solid fa-cart-plus me-2 text-danger"></i>2. Select Purchased Products
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Select TVS Component</label>
+                        <select class="form-select" id="billing_part_select">
+                            <option value="" selected disabled>Choose product to add...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Quantity</label>
+                        <input type="number" class="form-control" id="billing_part_qty" value="1" min="1">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-danger w-100 fw-bold" onclick="addItemToInvoice()">
+                            <i class="fa-solid fa-plus me-1"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Unit Price</th>
+                                <th>Qty</th>
+                                <th>Subtotal</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-items-body">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No products added to bill yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Bill Summary Preview & Save/WhatsApp Actions -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm position-sticky" style="top: 80px;">
+            <div class="card-header bg-danger text-white fw-bold py-3">
+                <i class="fa-solid fa-receipt me-2"></i>Invoice Calculation Summary
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Subtotal:</span>
+                    <span class="fw-bold" id="bill-subtotal">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">GST Tax (18%):</span>
+                    <span class="fw-bold" id="bill-tax">₹0.00</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="fs-5 fw-bold text-dark">Grand Total:</span>
+                    <span class="fs-4 fw-bold text-danger" id="bill-grand-total">₹0.00</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-lg fw-bold shadow-sm" onclick="sendInvoiceToWhatsApp()">
+                        <i class="fa-brands fa-whatsapp fa-lg me-2"></i> Save Bill & Send WhatsApp
+                    </button>
+                    <button class="btn btn-outline-secondary fw-semibold" onclick="clearInvoiceForm()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Reset Bill Form
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Section: Saved Invoice Records History Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>3. Saved Invoices & Billing History Log</span>
+        <button class="btn btn-sm btn-outline-light" onclick="loadSavedInvoicesHistory()">
+            <i class="fa-solid fa-rotate me-1"></i> Refresh History
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Date & Time</th>
+                        <th>Customer Name</th>
+                        <th>Phone Number</th>
+                        <th>Vehicle Info</th>
+                        <th>Grand Total</th>
+                        <th class="text-end pe-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="saved-invoices-tbody">
+                    <!-- Loaded dynamically from database -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

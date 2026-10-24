@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TVS Parts & Inventory Command Hub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tvs: {
+                            red: '#E31E24',
+                            darkred: '#B81419',
+                            blue: '#0D47A1',
+                            dark: '#1A1D20',
+                            bg: '#F4F6F9'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #F4F6F9;
+        }
+        .tvs-badge {
+            background-color: #FFFFFF;
+            color: #E31E24;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        }
+        .fade-in {
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-indicator {
+            width: 8px;
+            height: 8px;
+            background-color: #10B981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col bg-slate-100">
+
+    <!-- ============================================================== -->
+    <!-- AUTHENTICATION GATE / LOGIN PAGE                               -->
+    <!-- ============================================================== -->
+    <div id="auth-gate" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-tvs-dark to-slate-900 p-4 sm:p-6 overflow-y-auto">
+        <div class="max-w-md w-full my-auto">
+            
+            <!-- Branding Header -->
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center space-x-2 mb-2">
+                    <span class="tvs-badge px-3 py-1.5 rounded-lg text-xl shadow-lg">TVS</span>
+                    <span class="text-2xl font-black text-white tracking-tight">Command Hub</span>
+                </div>
+                <p class="text-xs text-slate-400 font-medium">Predictive Inventory, Workshop Management & Digital Billing</p>
+            </div>
+
+            <!-- Auth Form Card -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 relative overflow-hidden fade-in">
+                
+                <!-- Red Top Accent Strip -->
+                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-tvs-red via-tvs-darkred to-tvs-blue"></div>
+
+                <!-- LOGIN FORM -->
+                <div id="form-login" class="space-y-5">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900">Sign In to Dashboard</h2>
+                        <p class="text-xs text-slate-500">Select your role and enter your staff credentials.</p>
+                    </div>
+
+                    <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Access Role</label>
+                            <select id="login-role" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                                <option value="Store Administrator">Store Administrator / Manager</option>
+                                <option value="Workshop Service Lead">Workshop Service Lead</option>
+                                <option value="Inventory Clerk">Inventory & Billing Executive</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email / Staff ID</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                                <input type="email" id="login-email" required value="admin@tvshub.com" placeholder="admin@tvshub.com" class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-bold text-slate-700 uppercase">Password</label>
+                                <a href="javascript:void(0)" onclick="switchAuthView('forgot')" class="text-[11px] font-bold text-tvs-red hover:underline">Forgot password?</a>
+                            </div>
+                            <div class="relative">
+                                <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                                <input type="password" id="login-password" required value="password123" placeholder="••••••••" class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="login-remember" checked class="w-4 h-4 text-tvs-red border-slate-300 rounded focus:ring-tvs-red">
+                            <label for="login-remember" class="ml-2 text-xs font-semibold text-slate-600">Keep me logged in for 30 days</label>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-tvs-red hover:bg-tvs-darkred text-white text-xs font-extrabold rounded-xl shadow-lg transition flex items-center justify-center">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i> Access TVS Command Hub
+                        </button>
+                    </form>
+
+                    <div class="pt-2 text-center border-t border-slate-100">
+                        <span class="text-xs text-slate-500">Need a new staff account? </span>
+                        <a href="javascript:void(0)" onclick="switchAuthView('register')" class="text-xs font-bold text-tvs-red hover:underline">Register Staff Member</a>
+                    </div>
+                </div>
+
+                <!-- REGISTER FORM -->
+                <div id="form-register" class="space-y-5 hidden">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900">Register Staff Member</h2>
+                        <p class="text-xs text-slate-500">Create a new access account for workshop or billing team.</p>
+                    </div>
+
+                    <form onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                            <input type="text" required placeholder="Siddharth Patane" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Work Email</label>
+                            <input type="email" required placeholder="siddharth@tvshub.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assign Role</label>
+                                <select class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                                    <option value="Store Manager">Store Manager</option>
+                                    <option value="Workshop Lead">Workshop Lead</option>
+                                    <option value="Billing Clerk">Billing Clerk</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                                <input type="password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-xl shadow-lg transition flex items-center justify-center">
+                            <i class="fa-solid fa-user-plus mr-2"></i> Create Account
+                        </button>
+                    </form>
+
+                    <div class="pt-2 text-center border-t border-slate-100">
+                        <span class="text-xs text-slate-500">Already have an account? </span>
+                        <a href="javascript:void(0)" onclick="switchAuthView('login')" class="text-xs font-bold text-tvs-red hover:underline">Back to Login</a>
+                    </div>
+                </div>
+
+                <!-- FORGOT PASSWORD FORM -->
+                <div id="form-forgot" class="space-y-5 hidden">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900">Reset Password</h2>
+                        <p class="text-xs text-slate-500">Enter your email address to receive a security reset link.</p>
+                    </div>
+
+                    <form onsubmit="handleForgotSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Registered Email</label>
+                            <input type="email" required placeholder="admin@tvshub.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-tvs-red">
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-lg transition flex items-center justify-center">
+                            <i class="fa-solid fa-paper-plane mr-2"></i> Send Reset Link
+                        </button>
+                    </form>
+
+                    <div class="pt-2 text-center border-t border-slate-100">
+                        <a href="javascript:void(0)" onclick="switchAuthView('login')" class="text-xs font-bold text-tvs-red hover:underline">&larr; Return to Login Page</a>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Badge -->
+            <div class="text-center mt-6 text-xs text-slate-400">
+                Authorized Personnel Only &bull; TVS Operations &copy; 2026
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MAIN APPLICATION DASHBOARD (LOCKED UNTIL AUTHENTICATED)        -->
+    <!-- ============================================================== -->
+    <div id="app-wrapper" class="hidden min-h-screen flex flex-col">
+
+        <!-- Top Fixed Navigation Bar -->
+        <header class="bg-gradient-to-r from-tvs-red via-tvs-darkred to-tvs-dark text-white sticky top-0 z-40 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-lg bg-black/20 text-white hover:bg-black/30 transition">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-2 cursor-pointer" onclick="switchTab('dashboard')">
+                        <span class="tvs-badge px-2.5 py-1 rounded text-sm sm:text-base">TVS</span>
+                        <span class="font-extrabold text-base sm:text-lg tracking-tight">Parts & Workshop Command Hub</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <div class="hidden sm:flex items-center bg-black/25 px-3 py-1 rounded-full border border-white/10 text-xs font-semibold">
+                        <span class="pulse-indicator mr-2"></span>
+                        <span>ML Pipeline v2.4 Active</span>
+                    </div>
+
+                    <!-- User Account / Logout Menu -->
+                    <div class="flex items-center space-x-2 pl-2 border-l border-white/20">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs font-bold" id="user-display-name">Admin User</div>
+                            <div class="text-[10px] text-slate-300" id="user-display-role">Store Administrator</div>
+                        </div>
+                        <button onclick="handleLogout()" title="Sign Out" class="p-2 bg-black/20 hover:bg-red-900 text-white rounded-full transition">
+                            <i class="fa-solid fa-power-off text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+
+            <!-- Desktop Persistent Sidebar Navigation -->
+            <aside class="hidden lg:block w-64 shrink-0">
+                <div class="sticky top-24 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">Core Operations</div>
+                        <nav class="space-y-1">
+                            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl transition bg-tvs-red text-white shadow-sm">
+                                <i class="fa-solid fa-chart-line w-6 text-sm"></i> Dashboard Overview
+                            </button>
+                            <button onclick="switchTab('inventory')" id="nav-inventory" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-red-50 hover:text-tvs-red transition">
+                                <i class="fa-solid fa-boxes-stacked w-6 text-sm"></i> Inventory Manager
+                            </button>
+                            <button onclick="switchTab('analytics')" id="nav-analytics" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-red-50 hover:text-tvs-red transition">
+                                <i class="fa-solid fa-brain w-6 text-sm"></i> Sales & Analytics
+                            </button>
+                        </nav>
+
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 pt-4 pb-2">Billing & Workshop</div>
+                        <nav class="space-y-1">
+                            <button onclick="switchTab('billing')" id="nav-billing" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition">
+                                <i class="fa-brands fa-whatsapp w-6 text-sm text-emerald-600"></i> WhatsApp Billing
+                            </button>
+                            <button onclick="switchTab('service_hub')" id="nav-service_hub" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-red-50 hover:text-tvs-red transition">
+                                <i class="fa-solid fa-screwdriver-wrench w-6 text-sm text-amber-500"></i> Workshop Job Cards
+                            </button>
+                            <button onclick="switchTab('customer_ledger')" id="nav-customer_ledger" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-red-50 hover:text-tvs-red transition">
+                                <i class="fa-solid fa-address-book w-6 text-sm text-blue-500"></i> Vehicle History Ledger
+                            </button>
+                        </nav>
+
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 pt-4 pb-2">AI Intelligence</div>
+                        <nav class="space-y-1">
+                            <button onclick="switchTab('forecast_hub')" id="nav-forecast_hub" class="tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition">
+                                <i class="fa-solid fa-wand-magic-sparkles w-6 text-sm text-amber-500"></i> ML Forecast & Reorder
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Dynamic Main Content Section Container -->
+            <main class="flex-1 overflow-hidden">
+
+                <!-- TAB 1: DASHBOARD OVERVIEW -->
+                <section id="view-dashboard" class="tab-view fade-in space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
+                        <div>
+                            <h1 class="text-2xl font-black text-slate-900 tracking-tight">TVS Operations Dashboard</h1>
+                            <p class="text-xs sm:text-sm text-slate-500">Live inventory monitoring, parts demand health, and instant sales actions.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="openProductModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow transition">
+                                <i class="fa-solid fa-plus mr-1.5"></i> Add Part
+                            </button>
+                            <button onclick="switchTab('billing')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow transition">
+                                <i class="fa-brands fa-whatsapp mr-1.5"></i> Quick WhatsApp Bill
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-2xl p-5 border-l-4 border-tvs-red shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Catalog SKUs</p>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1" id="dash-kpi-total-parts">0</h3>
+                        </div>
+                        <div class="bg-white rounded-2xl p-5 border-l-4 border-amber-500 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Low Stock Warnings</p>
+                            <h3 class="text-2xl font-black text-amber-600 mt-1" id="dash-kpi-low-stock">0</h3>
+                        </div>
+                        <div class="bg-white rounded-2xl p-5 border-l-4 border-emerald-500 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recorded Sales Units</p>
+                            <h3 class="text-2xl font-black text-emerald-600 mt-1" id="dash-sales-units">0</h3>
+                        </div>
+                        <div class="bg-white rounded-2xl p-5 border-l-4 border-blue-600 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Forecast API</p>
+                            <h3 class="text-2xl font-black text-blue-600 mt-1">Monthly baseline</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-boxes-stacked text-tvs-red mr-2"></i> Quick Stock Snapshot</h2>
+                            <button onclick="switchTab('inventory')" class="text-xs font-bold text-tvs-red hover:underline">Manage All &rarr;</button>
+                        </div>
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-100 text-slate-500 uppercase text-[11px] font-bold">
+                                <tr>
+                                    <th class="px-4 py-3">Part Name</th>
+                                    <th class="px-4 py-3">Category</th>
+                                    <th class="px-4 py-3">Price</th>
+                                    <th class="px-4 py-3">Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-summary-tbody" class="divide-y divide-slate-100 font-medium"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- TAB 2: INVENTORY MANAGER -->
+                <section id="view-inventory" class="tab-view hidden fade-in space-y-6">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                        <h1 class="text-2xl font-black text-slate-900">Inventory Manager</h1>
+                        <button onclick="openProductModal()" class="px-4 py-2 bg-tvs-red text-white text-xs font-bold rounded-xl"><i class="fa-solid fa-plus mr-1"></i> Add Part</button>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-900 text-white text-[11px] uppercase font-bold">
+                                <tr>
+                                    <th class="px-4 py-3">ID</th>
+                                    <th class="px-4 py-3">Part Name</th>
+                                    <th class="px-4 py-3">Category</th>
+                                    <th class="px-4 py-3">Price</th>
+                                    <th class="px-4 py-3">Stock</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="divide-y divide-slate-100 font-medium"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- TAB 3: ANALYTICS -->
+                <section id="view-analytics" class="tab-view hidden fade-in space-y-6">
+                    <h1 class="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">Sales Analytics Engine</h1>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="h-64 relative"><canvas id="monthlySalesBarChart"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: BILLING -->
+                <section id="view-billing" class="tab-view hidden fade-in space-y-6">
+                    <h1 class="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">WhatsApp Digital Billing</h1>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" id="bill-cust-name" placeholder="Customer Name" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-bold">
+                            <input type="tel" id="bill-cust-phone" placeholder="WhatsApp Number (e.g. 9876543210)" class="p-2.5 bg-slate-50 border rounded-xl text-xs font-bold">
+                        </div>
+                        <button onclick="sendInvoiceToWhatsApp()" class="w-full py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow"><i class="fa-brands fa-whatsapp mr-2 text-base"></i> Generate & Send WhatsApp Bill</button>
+                    </div>
+                </section>
+
+                <!-- TAB 5: SERVICE HUB -->
+                <section id="view-service_hub" class="tab-view hidden fade-in space-y-6">
+                    <h1 class="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">Workshop Service Job Cards</h1>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 text-xs font-bold">Job cards and mechanic roster initialized.</div>
+                </section>
+
+                <!-- TAB 6: CUSTOMER LEDGER -->
+                <section id="view-customer_ledger" class="tab-view hidden fade-in space-y-6">
+                    <h1 class="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">Vehicle History Ledger</h1>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 text-xs font-bold">Vehicle service records ready.</div>
+                </section>
+
+                <!-- TAB 7: FORECAST HUB -->
+                <section id="view-forecast_hub" class="tab-view hidden fade-in space-y-6">
+                    <h1 class="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">ML Demand Forecast Hub</h1>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 text-xs font-bold">Monthly forecasts use linked sales; open the Forecast Hub to review data readiness.</div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- AUTHENTICATION & CORE SCRIPT ENGINE                            -->
+    <!-- ============================================================== -->
+    <script>
+        // Sample Inventory Collection
+        let inventory = [
+            { id: 1, name: "TVS Apache RTR 200 Front Brake Pad", category: "Brakes", price: 850.00, stock: 45, reorder: 15 },
+            { id: 2, name: "TVS Jupiter Drive Belt", category: "Drive Train", price: 620.00, stock: 30, reorder: 10 },
+            { id: 3, name: "TVS NTORQ 125 High Flow Air Filter", category: "Engine", price: 310.00, stock: 8, reorder: 12 }
+        ];
+
+        // Auth View Switcher
+        function switchAuthView(view) {
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('form-forgot').classList.add('hidden');
+
+            document.getElementById(`form-${view}`).classList.remove('hidden');
+        }
+
+        // Handle Login Submission
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById("login-email").value;
+            const role = document.getElementById("login-role").value;
+
+            // Update Header Display
+            document.getElementById("user-display-name").innerText = email.split('@')[0].toUpperCase();
+            document.getElementById("user-display-role").innerText = role;
+
+            // Unlock Dashboard Application
+            document.getElementById("auth-gate").classList.add("hidden");
+            document.getElementById("app-wrapper").classList.remove("hidden");
+
+            // Initialize Analytics and Tables
+            renderDashboard();
+            renderInventoryTable();
+            initCharts();
+        }
+
+        // Handle Registration
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            alert("Account registered successfully! Please login with your credentials.");
+            switchAuthView('login');
+        }
+
+        // Handle Password Reset
+        function handleForgotSubmit(e) {
+            e.preventDefault();
+            alert("Security reset link has been dispatched to your email address.");
+            switchAuthView('login');
+        }
+
+        // Handle Logout
+        function handleLogout() {
+            if (confirm("Are you sure you want to sign out?")) {
+                document.getElementById("app-wrapper").classList.add("hidden");
+                document.getElementById("auth-gate").classList.remove("hidden");
+                switchAuthView('login');
+            }
+        }
+
+        // App Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-nav-btn').forEach(btn => {
+                btn.className = "tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl text-slate-600 hover:bg-red-50 hover:text-tvs-red transition";
+            });
+
+            const activeView = document.getElementById(`view-${tabId}`);
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeView) activeView.classList.remove('hidden');
+            if (activeNav) {
+                activeNav.className = "tab-nav-btn w-full flex items-center px-3 py-2.5 text-xs font-bold rounded-xl transition bg-tvs-red text-white shadow-sm";
+            }
+        }
+
+        // Render Dashboard Tables
+        function renderDashboard() {
+            document.getElementById("dash-kpi-total-parts").innerText = inventory.length;
+            const lowStockCount = inventory.filter(i => i.stock <= i.reorder).length;
+            document.getElementById("dash-kpi-low-stock").innerText = lowStockCount;
+
+            const tbody = document.getElementById("dash-summary-tbody");
+            tbody.innerHTML = "";
+            inventory.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-bold text-slate-900">${item.name}</td>
+                    <td class="px-4 py-3 text-slate-500">${item.category}</td>
+                    <td class="px-4 py-3 font-bold">₹${item.price.toFixed(2)}</td>
+                    <td class="px-4 py-3 font-black text-slate-800">${item.stock}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById("inventory-table-body");
+            tbody.innerHTML = "";
+            inventory.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-bold text-slate-400">#${item.id}</td>
+                    <td class="px-4 py-3 font-bold text-slate-900">${item.name}</td>
+                    <td class="px-4 py-3 text-slate-500">${item.category}</td>
+                    <td class="px-4 py-3 font-bold">₹${item.price.toFixed(2)}</td>
+                    <td class="px-4 py-3 font-black">${item.stock}</td>
+                    <td class="px-4 py-3 text-right"><button class="text-tvs-red font-bold">Edit</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function initCharts() {
+            const ctxBar = document.getElementById("monthlySalesBarChart")?.getContext("2d");
+            if (ctxBar) {
+                new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
+                        datasets: [{ label: 'Units Sold', data: [45, 52, 58, 65, 70, 68, 80, 85], backgroundColor: '#E31E24' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        function sendInvoiceToWhatsApp() {
+            const name = document.getElementById("bill-cust-name").value;
+            const phone = document.getElementById("bill-cust-phone").value;
+            if (!name || !phone) return alert("Enter Customer Name and WhatsApp Number!");
+            const message = `*TVS PARTS HUB INVOICE*\nCustomer: ${name}\nStatus: Paid`;
+            window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+    </script>
+</body>
+</html>

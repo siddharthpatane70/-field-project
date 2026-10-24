@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Analytics & ML Comparison | TVS System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2 text-white fw-bold mb-0">Recorded Sales Analytics</h1>
+        <p class="text-slate-400 small mb-0">Explore sales recorded in this SQLite database. Forecasts use linked history in the Forecast Hub.</p>
+    </div>
+    <div class="btn-toolbar gap-2">
+        <button class="btn btn-outline-danger fw-bold text-white" data-bs-toggle="modal" data-bs-target="#recordSalesModal">
+            <i class="fa-solid fa-plus-circle me-1"></i> Log Monthly Sales Entry
+        </button>
+        <a class="btn btn-danger fw-bold" href="{{ url_for('forecast_hub') }}">
+            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AI Forecast & Copilot
+        </a>
+    </div>
+</div>
+
+<!-- Global Analytics Controls -->
+<div class="card border-0 shadow-sm mb-4 glass-panel">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-slate-300 mb-1">
+                    <i class="fa-solid fa-filter me-1 text-danger"></i> Filter by TVS Product:
+                </label>
+                <select class="form-select border-0 shadow-sm bg-dark text-white" id="analytics-product-filter" onchange="refreshAnalyticsCharts()">
+                    <option value="ALL" selected>-- Compare All Products --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-slate-300 mb-1">
+                    <i class="fa-solid fa-calendar me-1 text-danger"></i> Time Range:
+                </label>
+                <select class="form-select border-0 shadow-sm bg-dark text-white" id="analytics-year-filter" onchange="refreshAnalyticsCharts()">
+                    <option value="2026" selected>Current Year (2026)</option>
+                    <option value="2025">Previous Year (2025)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-slate-300 mb-1">
+                    <i class="fa-solid fa-chart-column me-1 text-danger"></i> Metric Type:
+                </label>
+                <select class="form-select border-0 shadow-sm bg-dark text-white" id="analytics-metric-type" onchange="refreshAnalyticsCharts()">
+                    <option value="units" selected>Units Sold (Quantity)</option>
+                    <option value="revenue">Total Revenue (₹)</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-danger w-100 fw-bold shadow-sm" onclick="refreshAnalyticsCharts()">
+                    <i class="fa-solid fa-rotate me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="small text-muted" id="analytics-filter-caption" aria-live="polite">Click a pie slice to focus the dashboard on that product.</div>
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="analytics-reset-product" hidden><i class="fa-solid fa-filter-circle-xmark me-1"></i>Clear product focus</button>
+</div>
+
+<!-- Visualization Charts -->
+<div class="row g-4">
+    <!-- Chart 1: Month-Wise Bar Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100 glass-panel">
+            <div class="card-header bg-transparent text-dark fw-bold py-3">
+                <span><i class="fa-solid fa-chart-bar me-2 text-danger"></i>Month-Wise Sales Comparison (Bar Chart)</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container-wrapper" style="position: relative; height: 260px;">
+                    <canvas id="monthlySalesBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Product Volume Pie Chart -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100 glass-panel">
+            <div class="card-header bg-transparent text-dark fw-bold py-3">
+                <span><i class="fa-solid fa-chart-pie me-2 text-primary"></i>Product Sales Share (Pie Chart)</span>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="chart-container-wrapper" style="position: relative; height: 240px; width: 100%; cursor: pointer;">
+                    <canvas id="productSharePieChart"></canvas>
+                </div>
+                <div class="small text-muted text-center" id="pie-selection-detail" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: Line Chart (Trend & Forecast) -->
+    <div class="col-lg-12">
+        <div class="card border-0 shadow-sm glass-panel">
+            <div class="card-header bg-transparent text-dark fw-bold py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span><i class="fa-solid fa-chart-line me-2 text-success"></i>Recorded Monthly Sales Trend</span>
+                <label class="small d-flex align-items-center gap-2" for="analytics-trend-window">Visible months
+                    <select class="form-select form-select-sm bg-dark text-white" id="analytics-trend-window" style="width:auto">
+                        <option value="3">3</option><option value="6">6</option><option value="12" selected>12</option>
+                    </select>
+                </label>
+            </div>
+            <div class="card-body">
+                <div class="chart-container-wrapper" style="position: relative; height: 220px;">
+                    <canvas id="salesTrendLineChart"></canvas>
+                </div>
+                <div class="small text-muted mt-2" id="line-point-detail" aria-live="polite">Select a point to inspect its recorded sales total.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Log Monthly Sales Entry -->
+<div class="modal fade" id="recordSalesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-cart-plus me-2 text-danger"></i>Log Product Sales Entry</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="salesEntryForm" onsubmit="handleSaveSalesEntry(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Select Target Product <span class="text-danger">*</span></label>
+                        <select class="form-select bg-dark text-white" id="sales_part_id" required></select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-white">Month <span class="text-danger">*</span></label>
+                            <select class="form-select bg-dark text-white" id="sales_month" required>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-white">Year <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control bg-dark text-white" id="sales_year" value="2026" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Units Sold <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control bg-dark text-white" id="sales_units" required placeholder="e.g. 45">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold">Submit Sales Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Compatibility modal: current data-linked monthly forecast -->
+<div class="modal fade" id="livePredictionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-chart-line me-2"></i>Monthly Sales Forecast</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="executeLivePrediction(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Select product</label>
+                        <select class="form-select bg-dark text-white" id="predict_part_id" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">Calculate monthly forecast</button>
+                </form>
+
+                <div id="prediction-result-display" class="mt-4 p-3 bg-dark text-white rounded border text-center d-none">
+                    <div class="small text-uppercase text-muted fw-bold">Next month estimate</div>
+                    <div class="display-5 fw-bold text-danger my-1" id="pred-quantity">No forecast yet</div>
+                    <div class="small text-slate-300" id="pred-confidence">A planning range is shown when history supports it.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Engine & Page Controller -->
+<script>
+    async function executeLivePrediction(event) {
+        event.preventDefault();
+        const partId = document.getElementById("predict_part_id").value;
+        try {
+            const response = await fetch(`/api/predict/${partId}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Forecast failed");
+            
+            document.getElementById("prediction-result-display").classList.remove("d-none");
+            const next = data.forecast?.[0];
+            document.getElementById("pred-quantity").innerText = next
+                ? `${next.units} units · ${next.month}` : "No supported forecast";
+            document.getElementById("pred-confidence").innerText = next
+                ? `Planning range: ${next.range_low}–${next.range_high} units · ${data.confidence} · ${data.method}`
+                : (data.warnings?.[0] || "Link sales history or use the Forecast Hub cold-start options.");
+        } catch (err) {
+            document.getElementById("pred-confidence").innerText = err.message || "Forecast failed";
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{
+    "model_version": "2.4.0-tvs-production",
+    "training_timestamp": "2026-08-27T23:52:11.089295",
+    "total_samples_trained": 513,
+    "metrics": {
+        "MAE": 2.356,
+        "RMSE": 2.9717,
+        "R2_Score": 0.9623,
+        "CV_Mean_MAE": 5.3455
+    },
+    "features_used": [
+        "unit_price",
+        "workshop_service_count",
+        "intermittent_ratio",
+        "mean_demand_interval",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "is_weekend",
+        "sin_day_of_week",
+        "cos_day_of_week",
+        "sin_month",
+        "cos_month",
+        "price_to_mean_ratio",
+        "qty_lag_1",
+        "qty_lag_7",
+        "qty_lag_14",
+        "qty_lag_30",
+        "qty_roll_mean_7",
+        "qty_roll_std_7",
+        "qty_roll_max_7",
+        "qty_roll_mean_14",
+        "qty_roll_std_14",
+        "qty_roll_max_14",
+        "qty_roll_mean_30",
+        "qty_roll_std_30",
+        "qty_roll_max_30",
+        "part_id"
+    ]
+}
